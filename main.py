@@ -39,6 +39,9 @@ class SearchQuery(BaseModel):
     locale: str | None = None # Optional filter
     content_type: str | None = None # Optional filter
 
+class SimilarityQuery(BaseModel):
+    id: str
+
 @app.post("/index")
 async def index_entry(payload: WebhookPayload):
     try:
@@ -88,34 +91,50 @@ async def index_entry(payload: WebhookPayload):
         print(f"An error occurred: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# main.py
+
 @app.post("/search")
 async def search_entries(query: SearchQuery):
     try:
-        # 1. Generate an embedding for the incoming search query
-        response = client.embeddings.create(
-            input=[query.query],
-            model="text-embedding-3-small"
-        )
+        # --- (Steps 1-3 are the same as before) ---
+        response = client.embeddings.create(input=[query.query], model="text-embedding-3-small")
         query_embedding = response.data[0].embedding
-        print("Query embedding created successfully.")
-
-        # 2. Build a metadata filter for the query
+        
         metadata_filter = {}
         if query.locale:
             metadata_filter["locale"] = query.locale
         if query.content_type:
             metadata_filter["content_type"] = query.content_type
 
-        # 3. Query Pinecone to find the most similar vectors
         search_results = index.query(
             vector=query_embedding,
-            top_k=5,  # Return the top 5 results
+            top_k=5,
             include_metadata=True,
             filter=metadata_filter if metadata_filter else None
         )
-        print("Pinecone queried successfully.")
 
-        # 4. Format the results into a clean list
+        # --- 4. (NEW) GENERATE SMART SNIPPET ---
+        smart_snippet = ""
+        if search_results['matches']:
+            # Get the text from the top search result
+            top_result_text = search_results['matches'][0]['metadata'].get('text_content', '')
+            
+            # Create a prompt for the LLM
+            prompt = f"""Based on the following context, provide a concise, one-sentence answer to the user's question. If the context is not relevant, say so.
+            Context: "{top_result_text}"
+            Question: "{query.query}"
+            Answer:"""
+
+            # Call the Chat Completions API
+            chat_response = client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=50, # Limit the response length
+                temperature=0.0 # Make the response deterministic
+            )
+            smart_snippet = chat_response.choices[0].message.content
+
+        # --- 5. FORMAT THE RESPONSE (Now including the snippet) ---
         results = []
         for match in search_results['matches']:
             results.append({
@@ -124,8 +143,40 @@ async def search_entries(query: SearchQuery):
                 "metadata": match['metadata']
             })
 
-        return {"status": "success", "results": results}
+        return {"status": "success", "smart_snippet": smart_snippet, "results": results}
 
     except Exception as e:
         print(f"An error occurred during search: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/find_similar")
+async def find_similar_entries(query: SimilarityQuery):
+    try:
+        # 1. Fetch the vector for the given ID from Pinecone
+        fetch_response = index.fetch(ids=[query.id])
+        # New, corrected line
+        source_vector = fetch_response.vectors[query.id].values
+
+        # 2. Query Pinecone using the fetched vector
+        search_results = index.query(
+            vector=source_vector,
+            top_k=6,  # Get 6 results, as the original will be one of them
+            include_metadata=True
+        )
+
+        # 3. Format results, skipping the original document itself
+        results = []
+        for match in search_results['matches']:
+            if match['id'] != query.id: # Filter out the source document
+                results.append({
+                    "id": match['id'],
+                    "score": match['score'],
+                    "metadata": match['metadata']
+                })
+
+        # Return the top 5 results
+        return {"status": "success", "results": results[:5]}
+
+    except Exception as e:
+        print(f"An error occurred during similarity search: {e}")
         raise HTTPException(status_code=500, detail=str(e))
