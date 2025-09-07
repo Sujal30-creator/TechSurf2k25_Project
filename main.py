@@ -1,268 +1,190 @@
+import os
+from pinecone import Pinecone
+from openai import OpenAI
 from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import List, Optional
-import json
-import logging
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
-import numpy as np
+from dotenv import load_dotenv
+from fastapi.middleware.cors import CORSMiddleware
 
 # Initialize FastAPI app
 app = FastAPI()
-
-# ADD CORS MIDDLEWARE
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Allows all origins
     allow_credentials=True,
-    allow_methods=["*"],  # Allows all HTTP methods
+    allow_methods=["*"],  # Allows all methods
     allow_headers=["*"],  # Allows all headers
 )
 
-# Set up logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Load environment variables from .env file
+load_dotenv()
 
-# Initialize TF-IDF vectorizer (lightweight alternative to sentence transformers)
-vectorizer = TfidfVectorizer(
-    max_features=1000,
-    stop_words='english',
-    ngram_range=(1, 2)
-)
+# Load API keys from environment variables
+OPENAI_API_KEY = os.getenv("OPEN_AI_KEY")
+PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
+PINECONE_ENVIRONMENT = os.getenv("PINECONE_ENVIRONMENT")  # e.g. "us-east-1-aws"
+PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME")    # e.g. "contentstack-search"
 
-# In-memory storage for documents and embeddings
-documents = {}
-document_texts = []
-document_ids = []
-tfidf_matrix = None
+# Initialize OpenAI client
+client = OpenAI(api_key=OPENAI_API_KEY)
 
-# Pydantic models for request/response
-class ContentstackWebhook(BaseModel):
+# Initialize Pinecone client instance (new style)
+pc = Pinecone(api_key=PINECONE_API_KEY, environment=PINECONE_ENVIRONMENT)
+
+# Connect to the Pinecone index
+index = pc.Index(PINECONE_INDEX_NAME)
+
+print("Services Initialized Successfully!")
+
+# Pydantic model for the incoming webhook payload
+class WebhookPayload(BaseModel):
     module: str
     event: str
     data: dict
 
-class SearchRequest(BaseModel):
+class SearchQuery(BaseModel):
     query: str
+    locale: str | None = None # Optional filter
+    content_type: str | None = None # Optional filter
 
-class SimilarityRequest(BaseModel):
+class SimilarityQuery(BaseModel):
     id: str
-
-class SearchResult(BaseModel):
-    id: str
-    score: float
-    metadata: dict
-
-class SearchResponse(BaseModel):
-    results: List[SearchResult]
-    smart_snippet: Optional[str] = None
-
-def rebuild_index():
-    """Rebuild the TF-IDF index with current documents"""
-    global tfidf_matrix, document_texts, document_ids
-    
-    if len(documents) > 0:
-        # Prepare texts and IDs
-        document_texts = []
-        document_ids = []
-        
-        for doc_id, doc_data in documents.items():
-            document_texts.append(doc_data['text'])
-            document_ids.append(doc_id)
-        
-        # Build TF-IDF matrix
-        tfidf_matrix = vectorizer.fit_transform(document_texts)
-        logger.info(f"TF-IDF index rebuilt with {len(documents)} documents")
-    else:
-        tfidf_matrix = None
-        document_texts = []
-        document_ids = []
-        logger.info("No documents available, index cleared")
-
-def generate_smart_snippet(query: str, top_results: List[dict]) -> str:
-    """Generate a smart snippet based on the query and top results"""
-    if not top_results:
-        return ""
-    
-    # Take the top result with highest similarity
-    best_result = top_results[0]
-    content = best_result.get('metadata', {})
-    
-    title = content.get('title', '')
-    description = content.get('description', '')
-    
-    if description:
-        return f"Based on your search for '{query}', here's what I found: {description[:200]}..."
-    elif title:
-        return f"The most relevant content for '{query}' is: {title}"
-    else:
-        return f"Found {len(top_results)} relevant results for your search."
-
-@app.get("/")
-async def root():
-    return {
-        "message": "Contentstack Search API is running! (Lightweight Version)",
-        "endpoints": {
-            "/index": "POST - Index content from Contentstack webhook",
-            "/search": "POST - Search for content",
-            "/find_similar": "POST - Find similar content",
-            "/health": "GET - Health check"
-        },
-        "total_documents": len(documents),
-        "search_ready": tfidf_matrix is not None,
-        "version": "lightweight"
-    }
-
-@app.get("/health")
-async def health_check():
-    return {
-        "status": "healthy",
-        "total_documents": len(documents),
-        "search_index_ready": tfidf_matrix is not None,
-        "version": "lightweight"
-    }
 
 @app.post("/index")
-async def index_content(webhook: ContentstackWebhook):
-    """Index content from Contentstack webhook"""
-    global documents
-    
+async def index_entry(payload: WebhookPayload):
     try:
+        # Only process entry publication events
+        if payload.module != "entry" or payload.event != "publish":
+            return {"status": "success", "message": "Event ignored."}
+
         # Extract entry data
-        entry = webhook.data.get('entry', {})
-        entry_uid = entry.get('uid')
-        
-        if not entry_uid:
-            raise HTTPException(status_code=400, detail="No entry UID found")
-        
-        # Prepare content for indexing
-        title = entry.get('title', '')
-        description = entry.get('description', '')
-        content = entry.get('content', '')
-        
-        # Combine text for searching
-        text_for_search = f"{title} {description} {content}".strip()
-        
-        if not text_for_search:
-            raise HTTPException(status_code=400, detail="No content to index")
-        
-        # Store document
-        documents[entry_uid] = {
-            'id': entry_uid,
-            'text': text_for_search,
-            'metadata': {
-                'title': title,
-                'description': description,
-                'content': content,
-                'content_type': entry.get('content_type', {}).get('uid', 'unknown'),
-                'locale': entry.get('locale', 'en-us')
-            }
-        }
-        
-        # Rebuild search index
-        rebuild_index()
-        
-        logger.info(f"Indexed content: {entry_uid}")
-        
-        return {
-            "message": f"Successfully indexed entry: {entry_uid}",
-            "total_documents": len(documents)
-        }
-    
-    except Exception as e:
-        logger.error(f"Error indexing content: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error indexing content: {str(e)}")
+        entry_data = payload.data.get("entry", {})
+        entry_uid = entry_data.get("uid")
+        content_type_uid = entry_data.get("content_type", {}).get("uid")
+        locale = entry_data.get("locale")
 
-@app.post("/search", response_model=SearchResponse)
-async def search_content(request: SearchRequest):
-    """Search for content using TF-IDF similarity"""
-    
-    if not documents or tfidf_matrix is None:
-        raise HTTPException(status_code=404, detail="No content indexed yet")
-    
-    try:
-        # Transform query using the same vectorizer
-        query_vector = vectorizer.transform([request.query])
-        
-        # Calculate cosine similarity
-        similarities = cosine_similarity(query_vector, tfidf_matrix).flatten()
-        
-        # Get top results (sorted by similarity)
-        top_indices = similarities.argsort()[-5:][::-1]  # Top 5 results, descending
-        
-        # Prepare results
-        results = []
-        for idx in top_indices:
-            if similarities[idx] > 0:  # Only include results with some similarity
-                doc_id = document_ids[idx]
-                doc = documents[doc_id]
-                
-                results.append(SearchResult(
-                    id=doc_id,
-                    score=float(similarities[idx]),
-                    metadata=doc['metadata']
-                ))
-        
-        # Generate smart snippet
-        smart_snippet = generate_smart_snippet(request.query, [r.dict() for r in results])
-        
-        logger.info(f"Search completed for query: '{request.query}' - {len(results)} results")
-        
-        return SearchResponse(
-            results=results,
-            smart_snippet=smart_snippet
+        if not all([entry_uid, content_type_uid, locale]):
+            raise HTTPException(status_code=400, detail="Missing essential data in payload.")
+
+        text_to_embed = entry_data.get("title", "")
+        if not text_to_embed:
+            return {"status": "success", "message": "Entry has no title to index."}
+
+        print(f"Text to embed: '{text_to_embed}'")
+
+        # Generate embedding with OpenAI
+        response = client.embeddings.create(
+            input=[text_to_embed],
+            model="text-embedding-3-small"
         )
-    
-    except Exception as e:
-        logger.error(f"Error searching content: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error searching: {str(e)}")
+        embedding = response.data[0].embedding
+        print("Embedding created successfully.")
 
-@app.post("/find_similar", response_model=SearchResponse)
-async def find_similar_content(request: SimilarityRequest):
-    """Find content similar to a given document ID"""
-    
-    if request.id not in documents:
-        raise HTTPException(status_code=404, detail="Document not found")
-    
-    if not documents or tfidf_matrix is None:
-        raise HTTPException(status_code=404, detail="No content indexed for similarity search")
-    
+        # Prepare data & upsert to Pinecone
+        vector_id = f"{locale}-{content_type_uid}-{entry_uid}"
+        metadata = {
+            "title": entry_data.get("title", ""),
+            "locale": locale,
+            "content_type": content_type_uid,
+            "text_content": text_to_embed
+        }
+
+        # Upsert vector using new API
+        index.upsert(vectors=[(vector_id, embedding, metadata)])
+        print(f"Vector upserted to Pinecone with ID: {vector_id}")
+
+        return {"status": "success", "vector_id": vector_id}
+
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# main.py
+
+@app.post("/search")
+async def search_entries(query: SearchQuery):
     try:
-        # Find the index of the document
-        doc_index = document_ids.index(request.id)
+        # --- (Steps 1-3 are the same as before) ---
+        response = client.embeddings.create(input=[query.query], model="text-embedding-3-small")
+        query_embedding = response.data[0].embedding
         
-        # Get the document vector
-        doc_vector = tfidf_matrix[doc_index:doc_index+1]
-        
-        # Calculate similarities with all other documents
-        similarities = cosine_similarity(doc_vector, tfidf_matrix).flatten()
-        
-        # Get top similar documents (excluding the original)
-        top_indices = similarities.argsort()[-6:][::-1]  # Top 6, descending
-        
-        # Prepare results (excluding the original document)
-        results = []
-        for idx in top_indices:
-            if idx != doc_index and similarities[idx] > 0:  # Exclude original
-                similar_doc_id = document_ids[idx]
-                doc = documents[similar_doc_id]
-                
-                results.append(SearchResult(
-                    id=similar_doc_id,
-                    score=float(similarities[idx]),
-                    metadata=doc['metadata']
-                ))
-        
-        logger.info(f"Found {len(results)} similar documents for ID: {request.id}")
-        
-        return SearchResponse(results=results)
-    
-    except Exception as e:
-        logger.error(f"Error finding similar content: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error finding similar content: {str(e)}")
+        metadata_filter = {}
+        if query.locale:
+            metadata_filter["locale"] = query.locale
+        if query.content_type:
+            metadata_filter["content_type"] = query.content_type
 
-# For local development
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+        search_results = index.query(
+            vector=query_embedding,
+            top_k=5,
+            include_metadata=True,
+            filter=metadata_filter if metadata_filter else None
+        )
+
+        # --- 4. (NEW) GENERATE SMART SNIPPET ---
+        smart_snippet = ""
+        if search_results['matches']:
+            # Get the text from the top search result
+            top_result_text = search_results['matches'][0]['metadata'].get('text_content', '')
+            
+            # Create a prompt for the LLM
+            prompt = f"""Based on the following context, provide a concise, one-sentence answer to the user's question. If the context is not relevant, say so.
+            Context: "{top_result_text}"
+            Question: "{query.query}"
+            Answer:"""
+
+            # Call the Chat Completions API
+            chat_response = client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=50, # Limit the response length
+                temperature=0.0 # Make the response deterministic
+            )
+            smart_snippet = chat_response.choices[0].message.content
+
+        # --- 5. FORMAT THE RESPONSE (Now including the snippet) ---
+        results = []
+        for match in search_results['matches']:
+            results.append({
+                "id": match['id'],
+                "score": match['score'],
+                "metadata": match['metadata']
+            })
+
+        return {"status": "success", "smart_snippet": smart_snippet, "results": results}
+
+    except Exception as e:
+        print(f"An error occurred during search: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/find_similar")
+async def find_similar_entries(query: SimilarityQuery):
+    try:
+        # 1. Fetch the vector for the given ID from Pinecone
+        fetch_response = index.fetch(ids=[query.id])
+        # New, corrected line
+        source_vector = fetch_response.vectors[query.id].values
+
+        # 2. Query Pinecone using the fetched vector
+        search_results = index.query(
+            vector=source_vector,
+            top_k=6,  # Get 6 results, as the original will be one of them
+            include_metadata=True
+        )
+
+        # 3. Format results, skipping the original document itself
+        results = []
+        for match in search_results['matches']:
+            if match['id'] != query.id: # Filter out the source document
+                results.append({
+                    "id": match['id'],
+                    "score": match['score'],
+                    "metadata": match['metadata']
+                })
+
+        # Return the top 5 results
+        return {"status": "success", "results": results[:5]}
+
+    except Exception as e:
+        print(f"An error occurred during similarity search: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
