@@ -53,50 +53,40 @@ class SimilarityQuery(BaseModel):
 @app.post("/index")
 async def index_entry(payload: WebhookPayload):
     try:
-        # Only process entry publication events
-        if payload.module != "entry" or payload.event != "publish":
-            return {"status": "success", "message": "Event ignored."}
-
-        # Extract entry data
         entry_data = payload.data.get("entry", {})
         entry_uid = entry_data.get("uid")
-        content_type_uid = entry_data.get("content_type", {}).get("uid")
+        content_type_uid = payload.data.get("content_type", {}).get("uid") or entry_data.get("content_type", {}).get("uid")
         locale = entry_data.get("locale")
 
         if not all([entry_uid, content_type_uid, locale]):
             raise HTTPException(status_code=400, detail="Missing essential data in payload.")
 
-        text_to_embed = entry_data.get("title", "")
-        if not text_to_embed:
-            return {"status": "success", "message": "Entry has no title to index."}
-
-        print(f"Text to embed: '{text_to_embed}'")
-
-        # Generate embedding with OpenAI
-        response = client.embeddings.create(
-            input=[text_to_embed],
-            model="text-embedding-3-small"
-        )
-        embedding = response.data[0].embedding
-        print("Embedding created successfully.")
-
-        # Prepare data & upsert to Pinecone
         vector_id = f"{locale}-{content_type_uid}-{entry_uid}"
-        metadata = {
-            "title": entry_data.get("title", ""),
-            "locale": locale,
-            "content_type": content_type_uid,
-            "text_content": text_to_embed
-        }
 
-        # Upsert vector using new API
-        index.upsert(vectors=[(vector_id, embedding, metadata)])
-        print(f"Vector upserted to Pinecone with ID: {vector_id}")
+        # Handle publish/update events
+        if payload.event == "publish":
+            text_to_embed = entry_data.get("title", "")
+            if not text_to_embed:
+                return {"status": "success", "message": "Entry has no title to index."}
+            
+            response = client.embeddings.create(input=[text_to_embed], model="text-embedding-3-small")
+            embedding = response.data[0].embedding
+            
+            metadata = { "title": text_to_embed, "locale": locale, "content_type": content_type_uid, "text_content": text_to_embed }
+            index.upsert(vectors=[(vector_id, embedding, metadata)])
+            return {"status": "success", "vector_id": vector_id}
 
-        return {"status": "success", "vector_id": vector_id}
+        # Handle unpublish/delete events
+        elif payload.event in ["unpublish", "delete"]:
+            index.delete(ids=[vector_id])
+            print(f"Vector deleted from Pinecone with ID: {vector_id}")
+            return {"status": "success", "message": f"Vector {vector_id} deleted."}
+
+        else:
+            return {"status": "success", "message": f"Event '{payload.event}' ignored."}
 
     except Exception as e:
-        print(f"An error occurred: {e}")
+        print(f"An error occurred during indexing: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # main.py
