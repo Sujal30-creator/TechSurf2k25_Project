@@ -29,7 +29,7 @@ PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME")    # e.g. "contentstack-s
 client = OpenAI(api_key=OPENAI_API_KEY)
 
 # Initialize Pinecone client instance (new style)
-pc = Pinecone(api_key=PINECONE_API_KEY, environment=PINECONE_ENVIRONMENT)
+pc = Pinecone(api_key=PINECONE_API_KEY)
 
 # Connect to the Pinecone index
 index = pc.Index(PINECONE_INDEX_NAME)
