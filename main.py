@@ -5,6 +5,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
+import redis
 
 # Initialize FastAPI app
 app = FastAPI()
@@ -22,8 +23,19 @@ load_dotenv()
 # Load API keys from environment variables
 OPENAI_API_KEY = os.getenv("OPEN_AI_KEY")
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
-PINECONE_ENVIRONMENT = os.getenv("PINECONE_ENVIRONMENT")  # e.g. "us-east-1-aws"
+# PINECONE_ENVIRONMENT = os.getenv("PINECONE_ENVIRONMENT")  # e.g. "us-east-1-aws"
 PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME")    # e.g. "contentstack-search"
+
+
+#--- Vercel KV (Redis) Connection ---
+KV_URL = os.getenv("KV_URL")
+if KV_URL:
+    r = redis.from_url(KV_URL)
+    print("Connected to Vercel KV (Redis)!")
+else:
+    r = None
+    print("Vercel KV URL not found. Analytics will be disabled.")
+
 
 # Initialize OpenAI client
 client = OpenAI(api_key=OPENAI_API_KEY)
@@ -141,6 +153,15 @@ async def search_entries(query: SearchQuery):
                 "metadata": match['metadata']
             })
 
+        # --- Log Analytics Data ---
+        if r and query.query:
+            # Increment score for the query in the 'top_searches' sorted set
+            r.zincrby("top_searches", 1, query.query.lower().strip())
+            
+            # If no results, increment score in the 'content_gaps' sorted set
+            if not results:
+                r.zincrby("content_gaps", 1, query.query.lower().strip())
+
         return {"status": "success", "smart_snippet": smart_snippet, "results": results}
 
     except Exception as e:
@@ -178,3 +199,20 @@ async def find_similar_entries(query: SimilarityQuery):
     except Exception as e:
         print(f"An error occurred during similarity search: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+    
+@app.get("/analytics")
+async def get_analytics():
+    if not r:
+        return {"top_searches": [], "content_gaps": []}
+    
+    # Fetch top 10 from 'top_searches' (most searched first)
+    top_searches = r.zrevrange("top_searches", 0, 9, withscores=True)
+    
+    # Fetch top 10 from 'content_gaps' (most searched with no results first)
+    content_gaps = r.zrevrange("content_gaps", 0, 9, withscores=True)
+
+    # Format the data for the frontend
+    formatted_top = [{"query": item.decode(), "count": int(score)} for item, score in top_searches]
+    formatted_gaps = [{"query": item.decode(), "count": int(score)} for item, score in content_gaps]
+
+    return {"top_searches": formatted_top, "content_gaps": formatted_gaps}
