@@ -138,6 +138,8 @@ async def search_entries(query: SearchQuery):
         # Define a minimum similarity score to consider a result relevant
         RELEVANCE_THRESHOLD = 0.10  # 10% similarity
 
+        CONTENT_GAP_THRESHOLD = 0.35
+
         response = client.embeddings.create(input=[query.query], model="text-embedding-3-small")
         query_embedding = response.data[0].embedding
         
@@ -158,6 +160,22 @@ async def search_entries(query: SearchQuery):
         # NEW: Filter the results based on our threshold
         raw_matches = search_results.get('matches', [])
         relevant_matches = [match for match in raw_matches if match['score'] >= RELEVANCE_THRESHOLD]
+
+        # --- (NEW) Analytics Logic ---
+        is_content_gap = True
+        if r and query.query:
+            # Always log the search term
+            r.zincrby("top_searches", 1, query.query.lower().strip())
+            
+            # Check if the BEST result meets our quality threshold
+            if relevant_matches and relevant_matches[0]['score'] >= CONTENT_GAP_THRESHOLD:
+                is_content_gap = False
+            
+            # If no result met the quality threshold, log it as a content gap
+            if is_content_gap:
+                r.zincrby("content_gaps", 1, query.query.lower().strip())
+
+         # --- (Smart Snippet and Results Formatting) ---
 
         smart_snippet = ""
         # Only generate a snippet if there are RELEVANT results
