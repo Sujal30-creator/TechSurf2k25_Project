@@ -26,6 +26,8 @@ OPENAI_API_KEY = os.getenv("OPEN_AI_KEY")
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 # PINECONE_ENVIRONMENT = os.getenv("PINECONE_ENVIRONMENT")  # e.g. "us-east-1-aws"
 PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME")    # e.g. "contentstack-search"
+CS_API_KEY = os.getenv("CONTENTSTACK_API_KEY")
+CS_MANAGEMENT_TOKEN = os.getenv("CONTENTSTACK_MANAGEMENT_TOKEN")
 
 
 #--- Vercel KV (Redis) Connection ---
@@ -49,6 +51,20 @@ index = pc.Index(PINECONE_INDEX_NAME)
 
 print("Services Initialized Successfully!")
 
+def extract_text_from_rte(rte_json):
+    texts = []
+    
+    def recurse(nodes):
+        for node in nodes:
+            if node.get("text"):
+                texts.append(node["text"])
+            if node.get("children"):
+                recurse(node["children"])
+                
+    if isinstance(rte_json, dict) and rte_json.get("children"):
+        recurse(rte_json["children"])
+        
+
 # Pydantic model for the incoming webhook payload
 class WebhookPayload(BaseModel):
     module: str
@@ -66,60 +82,46 @@ class SimilarityQuery(BaseModel):
 @app.post("/index")
 async def index_entry(payload: WebhookPayload):
     try:
-        # --- Get basic info from the webhook ---
         entry_data = payload.data.get("entry", {})
         entry_uid = entry_data.get("uid")
         locale = entry_data.get("locale")
 
-        # (NEW) Safely get content_type_uid from different possible payload structures
         content_type_data = payload.data.get("content_type")
         if isinstance(content_type_data, dict):
             content_type_uid = content_type_data.get("uid")
-        elif isinstance(content_type_data, str):
-            content_type_uid = content_type_data
         else:
-            content_type_uid = entry_data.get("content_type", {}).get("uid")
+            content_type_uid = content_type_data or entry_data.get("content_type", {}).get("uid")
 
         if not all([entry_uid, content_type_uid, locale]):
             raise HTTPException(status_code=400, detail="Missing essential data from webhook.")
 
         vector_id = f"{locale}-{content_type_uid}-{entry_uid}"
 
-        # --- Handle Delete/Unpublish Events ---
         if payload.event in ["unpublish", "delete"]:
             index.delete(ids=[vector_id])
-            print(f"Vector deleted from Pinecone with ID: {vector_id}")
             return {"status": "success", "message": f"Vector {vector_id} deleted."}
 
-        # --- Handle Publish/Update Events ---
         if payload.event == "publish":
-            # 1. Fetch the full entry from Contentstack Management API
-            CS_API_KEY = os.getenv("CONTENTSTACK_API_KEY")
-            CS_MANAGEMENT_TOKEN = os.getenv("CONTENTSTACK_MANAGEMENT_TOKEN")
-            
             fetch_url = f"https://eu-api.contentstack.com/v3/content_types/{content_type_uid}/entries/{entry_uid}?locale={locale}&branch=main"
-            headers = { "api_key": CS_API_KEY, "authorization": CS_MANAGEMENT_TOKEN }
+            headers = {"api_key": CS_API_KEY, "authorization": CS_MANAGEMENT_TOKEN}
             
             response = requests.get(fetch_url, headers=headers)
             response.raise_for_status()
             full_entry_data = response.json().get("entry", {})
 
-            # 2. Combine multiple fields for a richer embedding
             title = full_entry_data.get("title", "")
-            
-            body_json = full_entry_data.get("article_body", {}).get("children", [])
-            body_text = " ".join([node["children"][0]["text"] for node in body_json if node.get("type") == "p" and node.get("children")])
+            # (NEW) Use the robust function to get body text
+            body_text = extract_text_from_rte(full_entry_data.get("article_body", {}))
 
             text_to_embed = f"Title: {title}. Content: {body_text}"
             
             if not text_to_embed.strip() or text_to_embed.strip() == "Title: . Content:":
                 return {"status": "success", "message": "No text content found to index."}
 
-            # 3. Generate embedding and upsert to Pinecone
             embedding_response = client.embeddings.create(input=[text_to_embed], model="text-embedding-3-small")
             embedding = embedding_response.data[0].embedding
             
-            metadata = { "title": title, "locale": locale, "content_type": content_type_uid, "text_content": text_to_embed }
+            metadata = {"title": title, "locale": locale, "content_type": content_type_uid, "text_content": text_to_embed}
             index.upsert(vectors=[(vector_id, embedding, metadata)])
             return {"status": "success", "vector_id": vector_id}
 
@@ -128,7 +130,6 @@ async def index_entry(payload: WebhookPayload):
     except Exception as e:
         print(f"An error occurred during indexing: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
 
 @app.post("/search")
 async def search_entries(query: SearchQuery):
