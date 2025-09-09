@@ -136,7 +136,7 @@ async def index_entry(payload: WebhookPayload):
 async def search_entries(query: SearchQuery):
     try:
         # Define a minimum similarity score to consider a result relevant
-        RELEVANCE_THRESHOLD = 0.30  # 30% similarity
+        RELEVANCE_THRESHOLD = 0.10  # 10% similarity
 
         response = client.embeddings.create(input=[query.query], model="text-embedding-3-small")
         query_embedding = response.data[0].embedding
