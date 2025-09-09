@@ -106,7 +106,6 @@ async def index_entry(payload: WebhookPayload):
 @app.post("/search")
 async def search_entries(query: SearchQuery):
     try:
-        # --- (Steps 1-3 are the same as before) ---
         response = client.embeddings.create(input=[query.query], model="text-embedding-3-small")
         query_embedding = response.data[0].embedding
         
@@ -123,7 +122,7 @@ async def search_entries(query: SearchQuery):
             filter=metadata_filter if metadata_filter else None
         )
 
-        # --- 4. (NEW) GENERATE SMART SNIPPET ---
+        # --- GENERATE SMART SNIPPET ---
         smart_snippet = ""
         if search_results['matches']:
             # Get the text from the top search result
