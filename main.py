@@ -63,15 +63,22 @@ class SearchQuery(BaseModel):
 class SimilarityQuery(BaseModel):
     id: str
 
-
 @app.post("/index")
 async def index_entry(payload: WebhookPayload):
     try:
         # --- Get basic info from the webhook ---
         entry_data = payload.data.get("entry", {})
         entry_uid = entry_data.get("uid")
-        content_type_uid = payload.data.get("content_type", {}).get("uid") or entry_data.get("content_type", {}).get("uid")
         locale = entry_data.get("locale")
+
+        # (NEW) Safely get content_type_uid from different possible payload structures
+        content_type_data = payload.data.get("content_type")
+        if isinstance(content_type_data, dict):
+            content_type_uid = content_type_data.get("uid")
+        elif isinstance(content_type_data, str):
+            content_type_uid = content_type_data
+        else:
+            content_type_uid = entry_data.get("content_type", {}).get("uid")
 
         if not all([entry_uid, content_type_uid, locale]):
             raise HTTPException(status_code=400, detail="Missing essential data from webhook.")
@@ -99,13 +106,13 @@ async def index_entry(payload: WebhookPayload):
 
             # 2. Combine multiple fields for a richer embedding
             title = full_entry_data.get("title", "")
-            # NOTE: Rich Text content is complex. For now, we'll just check if the key exists.
-            # A more advanced version would parse the JSON to extract all the text.
-            body = " ".join([p["children"][0]["text"] for p in full_entry_data.get("article_body", {}).get("children", []) if p.get("children")])
-
-            text_to_embed = f"Title: {title}. Content: {body}"
             
-            if not text_to_embed.strip():
+            body_json = full_entry_data.get("article_body", {}).get("children", [])
+            body_text = " ".join([node["children"][0]["text"] for node in body_json if node.get("type") == "p" and node.get("children")])
+
+            text_to_embed = f"Title: {title}. Content: {body_text}"
+            
+            if not text_to_embed.strip() or text_to_embed.strip() == "Title: . Content:":
                 return {"status": "success", "message": "No text content found to index."}
 
             # 3. Generate embedding and upsert to Pinecone
