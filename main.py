@@ -51,6 +51,7 @@ index = pc.Index(PINECONE_INDEX_NAME)
 
 print("Services Initialized Successfully!")
 
+# Helper function to safely extract text from Rich Text Editor JSON
 def extract_text_from_rte(rte_json):
     texts = []
     
@@ -63,6 +64,7 @@ def extract_text_from_rte(rte_json):
                 
     if isinstance(rte_json, dict) and rte_json.get("children"):
         recurse(rte_json["children"])
+    return " ".join(texts)
         
 
 # Pydantic model for the incoming webhook payload
@@ -85,12 +87,13 @@ async def index_entry(payload: WebhookPayload):
         entry_data = payload.data.get("entry", {})
         entry_uid = entry_data.get("uid")
         locale = entry_data.get("locale")
-
-        content_type_data = payload.data.get("content_type")
-        if isinstance(content_type_data, dict):
-            content_type_uid = content_type_data.get("uid")
-        else:
-            content_type_uid = content_type_data or entry_data.get("content_type", {}).get("uid")
+        
+        # --- FINAL FIX: Most robust way to get content_type_uid ---
+        content_type_uid = entry_data.get("content_type", {}).get("uid")
+        if not content_type_uid:
+            content_type = payload.data.get("content_type", {})
+            if isinstance(content_type, dict):
+                 content_type_uid = content_type.get("uid")
 
         if not all([entry_uid, content_type_uid, locale]):
             raise HTTPException(status_code=400, detail="Missing essential data from webhook.")
@@ -99,6 +102,7 @@ async def index_entry(payload: WebhookPayload):
 
         if payload.event in ["unpublish", "delete"]:
             index.delete(ids=[vector_id])
+            print(f"Vector deleted: {vector_id}")
             return {"status": "success", "message": f"Vector {vector_id} deleted."}
 
         if payload.event == "publish":
@@ -110,9 +114,7 @@ async def index_entry(payload: WebhookPayload):
             full_entry_data = response.json().get("entry", {})
 
             title = full_entry_data.get("title", "")
-            # (NEW) Use the robust function to get body text
             body_text = extract_text_from_rte(full_entry_data.get("article_body", {}))
-
             text_to_embed = f"Title: {title}. Content: {body_text}"
             
             if not text_to_embed.strip() or text_to_embed.strip() == "Title: . Content:":
@@ -123,6 +125,7 @@ async def index_entry(payload: WebhookPayload):
             
             metadata = {"title": title, "locale": locale, "content_type": content_type_uid, "text_content": text_to_embed}
             index.upsert(vectors=[(vector_id, embedding, metadata)])
+            print(f"Vector upserted: {vector_id}")
             return {"status": "success", "vector_id": vector_id}
 
         return {"status": "success", "message": f"Event '{payload.event}' ignored."}
@@ -130,6 +133,7 @@ async def index_entry(payload: WebhookPayload):
     except Exception as e:
         print(f"An error occurred during indexing: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.post("/search")
 async def search_entries(query: SearchQuery):
