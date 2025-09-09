@@ -54,18 +54,15 @@ print("Services Initialized Successfully!")
 # Helper function to safely extract text from Rich Text Editor JSON
 def extract_text_from_rte(rte_json):
     texts = []
-    
     def recurse(nodes):
         for node in nodes:
             if node.get("text"):
                 texts.append(node["text"])
             if node.get("children"):
                 recurse(node["children"])
-                
     if isinstance(rte_json, dict) and rte_json.get("children"):
         recurse(rte_json["children"])
     return " ".join(texts)
-        
 
 # Pydantic model for the incoming webhook payload
 class WebhookPayload(BaseModel):
@@ -83,13 +80,12 @@ class SimilarityQuery(BaseModel):
 
 @app.post("/index")
 async def index_entry(payload: WebhookPayload):
-    print("\n--- [DEBUG] /index endpoint triggered ---")
     try:
-        # --- Get basic info from the webhook ---
         entry_data = payload.data.get("entry", {})
         entry_uid = entry_data.get("uid")
         locale = entry_data.get("locale")
         
+        # --- FINAL FIX: Most robust way to get content_type_uid ---
         content_type_uid = entry_data.get("content_type", {}).get("uid")
         if not content_type_uid:
             content_type = payload.data.get("content_type", {})
@@ -97,58 +93,42 @@ async def index_entry(payload: WebhookPayload):
                  content_type_uid = content_type.get("uid")
 
         if not all([entry_uid, content_type_uid, locale]):
-            print(f"[DEBUG] FAILED: Missing essential data from webhook. UID: {entry_uid}, CT: {content_type_uid}, Locale: {locale}")
             raise HTTPException(status_code=400, detail="Missing essential data from webhook.")
 
         vector_id = f"{locale}-{content_type_uid}-{entry_uid}"
-        print(f"[DEBUG] 1. Successfully parsed webhook. Vector ID will be: {vector_id}")
 
-        # --- Handle Delete/Unpublish Events ---
         if payload.event in ["unpublish", "delete"]:
             index.delete(ids=[vector_id])
-            print(f"[DEBUG] SUCCESS: Vector deleted: {vector_id}")
+            print(f"Vector deleted: {vector_id}")
             return {"status": "success", "message": f"Vector {vector_id} deleted."}
 
-        # --- Handle Publish/Update Events ---
         if payload.event == "publish":
-            print("[DEBUG] 2. Event is 'publish'. Starting full content fetch.")
-            # 1. Fetch the full entry from Contentstack Management API
-            CS_API_KEY = os.getenv("CONTENTSTACK_API_KEY")
-            CS_MANAGEMENT_TOKEN = os.getenv("CONTENTSTACK_MANAGEMENT_TOKEN")
-            
             fetch_url = f"https://eu-api.contentstack.com/v3/content_types/{content_type_uid}/entries/{entry_uid}?locale={locale}&branch=main"
             headers = {"api_key": CS_API_KEY, "authorization": CS_MANAGEMENT_TOKEN}
             
             response = requests.get(fetch_url, headers=headers)
-            response.raise_for_status() # This will raise an error if the request fails
+            response.raise_for_status()
             full_entry_data = response.json().get("entry", {})
-            print("[DEBUG] 3. Successfully fetched full entry from Contentstack API.")
 
-            # 2. Combine multiple fields for a richer embedding
             title = full_entry_data.get("title", "")
             body_text = extract_text_from_rte(full_entry_data.get("article_body", {}))
-            print(f"[DEBUG] 4. Extracted text. Title: '{title}', Body: '{body_text[:50]}...'")
-
             text_to_embed = f"Title: {title}. Content: {body_text}"
             
             if not text_to_embed.strip() or text_to_embed.strip() == "Title: . Content:":
-                print("[DEBUG] FAILED: No text content found to index after combining fields.")
                 return {"status": "success", "message": "No text content found to index."}
 
-            # 3. Generate embedding and upsert to Pinecone
             embedding_response = client.embeddings.create(input=[text_to_embed], model="text-embedding-3-small")
             embedding = embedding_response.data[0].embedding
-            print("[DEBUG] 5. Successfully created embedding from OpenAI.")
             
             metadata = {"title": title, "locale": locale, "content_type": content_type_uid, "text_content": text_to_embed}
             index.upsert(vectors=[(vector_id, embedding, metadata)])
-            print(f"[DEBUG] 6. SUCCESS: Vector upserted to Pinecone: {vector_id}")
+            print(f"Vector upserted: {vector_id}")
             return {"status": "success", "vector_id": vector_id}
 
         return {"status": "success", "message": f"Event '{payload.event}' ignored."}
 
     except Exception as e:
-        print(f"[DEBUG] FAILED: An unexpected error occurred: {e}")
+        print(f"An error occurred during indexing: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
