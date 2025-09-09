@@ -101,11 +101,13 @@ async def index_entry(payload: WebhookPayload):
         print(f"An error occurred during indexing: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-# main.py
 
 @app.post("/search")
 async def search_entries(query: SearchQuery):
     try:
+        # Define a minimum similarity score to consider a result relevant
+        RELEVANCE_THRESHOLD = 0.30  # 30% similarity
+
         response = client.embeddings.create(input=[query.query], model="text-embedding-3-small")
         query_embedding = response.data[0].embedding
         
@@ -115,6 +117,7 @@ async def search_entries(query: SearchQuery):
         if query.content_type:
             metadata_filter["content_type"] = query.content_type
 
+        # Get the initial top 5 results from Pinecone
         search_results = index.query(
             vector=query_embedding,
             top_k=5,
@@ -122,44 +125,44 @@ async def search_entries(query: SearchQuery):
             filter=metadata_filter if metadata_filter else None
         )
 
-        # --- GENERATE SMART SNIPPET ---
+        # NEW: Filter the results based on our threshold
+        raw_matches = search_results.get('matches', [])
+        relevant_matches = [match for match in raw_matches if match['score'] >= RELEVANCE_THRESHOLD]
+
         smart_snippet = ""
-        if search_results['matches']:
-            # Get the text from the top search result
-            top_result_text = search_results['matches'][0]['metadata'].get('text_content', '')
+        # Only generate a snippet if there are RELEVANT results
+        if relevant_matches:
+            top_result_text = relevant_matches[0]['metadata'].get('text_content', '')
             
-            # Create a prompt for the LLM
             prompt = f"""Based on the following context, provide a concise, one-sentence answer to the user's question. If the context is not relevant, say so.
             Context: "{top_result_text}"
             Question: "{query.query}"
             Answer:"""
 
-            # Call the Chat Completions API
             chat_response = client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[{"role": "user", "content": prompt}],
-                max_tokens=50, # Limit the response length
-                temperature=0.0 # Make the response deterministic
+                max_tokens=50,
+                temperature=0.0
             )
             smart_snippet = chat_response.choices[0].message.content
 
-        # --- 5. FORMAT THE RESPONSE (Now including the snippet) ---
+        # Format the relevant results for the frontend
         results = []
-        for match in search_results['matches']:
+        for match in relevant_matches:
             results.append({
                 "id": match['id'],
                 "score": match['score'],
                 "metadata": match['metadata']
             })
 
-        # --- Log Analytics Data ---
-        if r and query.query:
-            # Increment score for the query in the 'top_searches' sorted set
+        # NEW: Log to content gaps only if there are NO RELEVANT results
+        if not relevant_matches and r and query.query:
             r.zincrby("top_searches", 1, query.query.lower().strip())
-            
-            # If no results, increment score in the 'content_gaps' sorted set
-            if not results:
-                r.zincrby("content_gaps", 1, query.query.lower().strip())
+            r.zincrby("content_gaps", 1, query.query.lower().strip())
+        elif r and query.query: # Log to top searches if there were results
+             r.zincrby("top_searches", 1, query.query.lower().strip())
+
 
         return {"status": "success", "smart_snippet": smart_snippet, "results": results}
 
