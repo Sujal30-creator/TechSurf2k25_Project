@@ -1,0 +1,28 @@
+{
+  "project": {
+    "uid": "68c26a657b07c8648f5a9490",
+    "name": "search-app-ui",
+    "projectType": "FILEUPLOAD",
+    "organizationUid": "blt2918c01e132616c9",
+    "environments": [
+      {
+        "uid": "68c26a657b07c8648f5a9497",
+        "name": "production",
+        "frameworkPreset": "CRA",
+        "__typename": "Environment"
+      }
+    ],
+    "__typename": "Project",
+    "deployments": [
+      {
+        "uid": "68c26a657b07c8648f5a94a2",
+        "status": "QUEUED",
+        "createdAt": "2025-09-11T06:21:25.648Z",
+        "updatedAt": "2025-09-11T06:21:26.030Z",
+        "deploymentUrl": "search-app-ui.eu-contentstackapps.com",
+        "commitMessage": "Triggered By File Upload",
+        "__typename": "Deployment"
+      }
+    ]
+  }
+}

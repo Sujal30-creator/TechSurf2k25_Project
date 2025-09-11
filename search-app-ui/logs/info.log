@@ -1,0 +1,54 @@
+{"level":"info","message":"GitHub connection identified!"}
+{"level":"info","message":"New project created successfully"}
+{"level":"info","message":"2025-09-11 06:21:41.970:  Installing dependencies..."}
+{"level":"info","message":"2025-09-11 06:21:46.322:  =========================================================="}
+{"level":"info","message":"2025-09-11 06:21:46.331:  Current Node.js Version: v22.17.1"}
+{"level":"info","message":"2025-09-11 06:21:46.334:  =========================================================="}
+{"level":"info","message":"2025-09-11 06:21:49.772:  npm warn deprecated w3c-hr-time@1.0.2: Use your platform's native performance.now() and performance.timeOrigin."}
+{"level":"info","message":"2025-09-11 06:21:50.248:  npm warn deprecated stable@0.1.8: Modern JS already guarantees Array#sort() is a stable sort, so this library is deprecated. See the compatibility table on MDN: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort#browser_compatibility"}
+{"level":"info","message":"2025-09-11 06:21:50.283:  npm warn deprecated sourcemap-codec@1.4.8: Please use @jridgewell/sourcemap-codec instead"}
+{"level":"info","message":"2025-09-11 06:21:50.418:  npm warn deprecated rimraf@3.0.2: Rimraf versions prior to v4 are no longer supported"}
+{"level":"info","message":"2025-09-11 06:21:50.457:  npm warn deprecated rollup-plugin-terser@7.0.2: This package has been deprecated and is no longer maintained. Please use @rollup/plugin-terser"}
+{"level":"info","message":"2025-09-11 06:21:50.741:  npm warn deprecated q@1.5.1: You or someone you depend on is using Q, the JavaScript Promise library that gave JavaScript developers strong feelings about promises. They can almost certainly migrate to the native JavaScript promise now. Thank you literally everyone for joining me in this bet against the odds. Be excellent to each other."}
+{"level":"info","message":"2025-09-11 06:21:50.743:  npm warn deprecated"}
+{"level":"info","message":"2025-09-11 06:21:50.745:  npm warn deprecated (For a CapTP with native promises, see @endo/eventual-send and @endo/captp)"}
+{"level":"info","message":"2025-09-11 06:21:50.838:  npm warn deprecated workbox-cacheable-response@6.6.0: workbox-background-sync@6.6.0"}
+{"level":"info","message":"2025-09-11 06:21:51.960:  npm warn deprecated inflight@1.0.6: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful."}
+{"level":"info","message":"2025-09-11 06:21:52.725:  npm warn deprecated domexception@2.0.1: Use your platform's native DOMException instead"}
+{"level":"info","message":"2025-09-11 06:21:53.596:  npm warn deprecated svgo@1.3.2: This SVGO version is no longer supported. Upgrade to v2.x.x."}
+{"level":"info","message":"2025-09-11 06:21:53.960:  npm warn deprecated @humanwhocodes/config-array@0.13.0: Use @eslint/config-array instead"}
+{"level":"info","message":"2025-09-11 06:21:54.531:  npm warn deprecated @babel/plugin-proposal-class-properties@7.18.6: This proposal has been merged to the ECMAScript standard and thus this plugin is no longer maintained. Please use @babel/plugin-transform-class-properties instead."}
+{"level":"info","message":"2025-09-11 06:21:55.225:  npm warn deprecated @babel/plugin-proposal-private-methods@7.18.6: This proposal has been merged to the ECMAScript standard and thus this plugin is no longer maintained. Please use @babel/plugin-transform-private-methods instead."}
+{"level":"info","message":"2025-09-11 06:21:55.481:  npm warn deprecated source-map@0.8.0-beta.0: The work that was done in this beta branch won't be included in future versions"}
+{"level":"info","message":"2025-09-11 06:21:57.712:  npm warn deprecated eslint@8.57.1: This version is no longer supported. Please see https://eslint.org/version-support for other options."}
+{"level":"info","message":"2025-09-11 06:22:00.597:  added 1351 packages, and audited 1352 packages in 14s"}
+{"level":"info","message":"2025-09-11 06:22:00.600:  270 packages are looking for funding"}
+{"level":"info","message":"2025-09-11 06:22:00.602:    run `npm fund` for details"}
+{"level":"info","message":"2025-09-11 06:22:00.604:  9 vulnerabilities (3 moderate, 6 high)"}
+{"level":"info","message":"2025-09-11 06:22:00.606:  To address all issues (including breaking changes), run:"}
+{"level":"info","message":"2025-09-11 06:22:00.607:    npm audit fix --force"}
+{"level":"info","message":"2025-09-11 06:22:00.609:  Run `npm audit` for details."}
+{"level":"info","message":"2025-09-11 06:22:00.611:  npm notice"}
+{"level":"info","message":"2025-09-11 06:22:00.613:  npm notice New minor version of npm available! 11.4.2 -> 11.6.0"}
+{"level":"info","message":"2025-09-11 06:22:00.614:  npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.6.0"}
+{"level":"info","message":"2025-09-11 06:22:00.616:  npm notice To update run: npm install -g npm@11.6.0"}
+{"level":"info","message":"2025-09-11 06:22:00.618:  npm notice"}
+{"level":"info","message":"2025-09-11 06:22:12.838:  Init build..."}
+{"level":"info","message":"2025-09-11 06:22:13.815:  > search-app-ui@0.1.0 build"}
+{"level":"info","message":"2025-09-11 06:22:13.817:  > react-scripts build"}
+{"level":"info","message":"2025-09-11 06:22:15.398:  Creating an optimized production build..."}
+{"level":"info","message":"2025-09-11 06:22:26.446:  Compiled with warnings."}
+{"level":"info","message":"2025-09-11 06:22:26.450:  src/App.js"}
+{"level":"info","message":"2025-09-11 06:22:26.455:    Line 21:31:  'setSelectedContentType' is assigned a value but never used  no-unused-vars"}
+{"level":"info","message":"2025-09-11 06:22:26.457:  Search for the keywords to learn more about each warning."}
+{"level":"info","message":"2025-09-11 06:22:26.464:    128.57 kB  build/static/js/main.4460bbc5.js"}
+{"level":"info","message":"2025-09-11 06:22:26.482:  Find out more about deployment here:"}
+{"level":"info","message":"2025-09-11 06:22:26.484:    https://cra.link/deployment"}
+{"level":"info","message":"2025-09-11 06:22:26.616:  npm notice"}
+{"level":"info","message":"2025-09-11 06:22:26.618:  npm notice New minor version of npm available! 11.4.2 -> 11.6.0"}
+{"level":"info","message":"2025-09-11 06:22:26.625:  npm notice"}
+{"level":"info","message":"2025-09-11 06:22:27.047:  Build successful"}
+{"level":"info","message":"2025-09-11 06:22:27.049:  Cloud functions:"}
+{"level":"info","message":"2025-09-11 06:22:27.184:  None"}
+{"level":"info","message":"2025-09-11 06:23:40.384:  Build and hosting process completed successfully"}
+{"level":"info","message":"2025-09-11 06:23:40.804:  Site is live"}

@@ -103,7 +103,7 @@ async def index_entry(payload: WebhookPayload):
             return {"status": "success", "message": f"Vector {vector_id} deleted."}
 
         if payload.event == "publish":
-            fetch_url = f"https://eu-api.contentstack.com/v3/content_types/{content_type_uid}/entries/{entry_uid}?locale={locale}&branch=main"
+            fetch_url = f"https://eu-api.contentstack.com/v3/content_types/{content_type_uid}/entries/{entry_uid}?locale={locale}"
             headers = {"api_key": CS_API_KEY, "authorization": CS_MANAGEMENT_TOKEN}
             
             response = requests.get(fetch_url, headers=headers)

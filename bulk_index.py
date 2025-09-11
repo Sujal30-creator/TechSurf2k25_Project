@@ -18,7 +18,7 @@ def fetch_all_entries():
     """Fetches all entries of a specific content type from Contentstack."""
     print(f"Fetching all entries for content type: {CONTENT_TYPE_UID}...")
     
-    url = f"https://eu-api.contentstack.com/v3/content_types/{CONTENT_TYPE_UID}/entries?branch=main"
+    url = f"https://eu-api.contentstack.com/v3/content_types/{CONTENT_TYPE_UID}/entries"
     headers = {
         "api_key": CS_API_KEY,
         "authorization": CS_MANAGEMENT_TOKEN,
