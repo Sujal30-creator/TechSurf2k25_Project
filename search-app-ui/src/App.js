@@ -19,6 +19,7 @@ function App() {
   const [error, setError] = useState('');
   const [selectedLocale, setSelectedLocale] = useState('');
   const [selectedContentType, setSelectedContentType] = useState('');
+  const [threshold, setThreshold] = useState(35);
 
   // Initialize the Contentstack App SDK
   useEffect(() => {
@@ -43,6 +44,7 @@ function App() {
           query: searchQuery,
           locale: selectedLocale || null,
           content_type: selectedContentType || null,
+          threshold: threshold,
         }),
       });
 
@@ -145,6 +147,24 @@ function App() {
             <button className="SearchButton" onClick={handleSearch} disabled={isLoading}>
               {isLoading ? 'Searching...' : 'Search'}
             </button>
+          </div>
+
+          <div className="SearchContainer">
+            {/* ... Your existing input and button ... */}
+          </div>
+
+          {/* ADD THIS NEW CONTAINER AND SLIDER */}
+          <div className="FilterContainer">
+            <label htmlFor="threshold">Relevance Threshold: <strong>{threshold}%</strong></label>
+            <input
+              type="range"
+              id="threshold"
+              min="10"
+              max="90"
+              value={threshold}
+              onChange={(e) => setThreshold(Number(e.target.value))}
+              className="ThresholdSlider"
+            />
           </div>
 
           <div className="ResultsContainer">

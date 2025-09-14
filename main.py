@@ -74,6 +74,7 @@ class SearchQuery(BaseModel):
     query: str
     locale: str | None = None # Optional filter
     content_type: str | None = None # Optional filter
+    threshold: float | None = 35.0
 
 class SimilarityQuery(BaseModel):
     id: str
@@ -136,7 +137,9 @@ async def index_entry(payload: WebhookPayload):
 async def search_entries(query: SearchQuery):
     try:
         # Define a minimum similarity score to consider a result relevant
-        RELEVANCE_THRESHOLD = 0.10  # 10% similarity
+        
+
+        relevance_threshold = (query.threshold / 100.0) if query.threshold else 0.10
 
         CONTENT_GAP_THRESHOLD = 0.35
 
@@ -159,7 +162,7 @@ async def search_entries(query: SearchQuery):
 
         # NEW: Filter the results based on our threshold
         raw_matches = search_results.get('matches', [])
-        relevant_matches = [match for match in raw_matches if match['score'] >= RELEVANCE_THRESHOLD]
+        relevant_matches = [match for match in raw_matches if match['score'] >= relevance_threshold]
 
         # --- (NEW) Analytics Logic ---
         is_content_gap = True
