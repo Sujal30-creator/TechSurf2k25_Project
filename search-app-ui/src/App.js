@@ -4,7 +4,7 @@ import AnalyticsDashboard from './AnalyticsDashboard';
 import './App.css';
 
 // Replace this with your actual Vercel deployment URL
-const API_BASE_URL = 'https://techsurf-2k25.vercel.app';
+const API_BASE_URL = 'https://vercel.com/sujals-projects-9af316d2/techsurf-2k25';
 
 function App() {
   // SDK State
@@ -149,11 +149,6 @@ function App() {
             </button>
           </div>
 
-          <div className="SearchContainer">
-            {/* ... Your existing input and button ... */}
-          </div>
-
-          {/* ADD THIS NEW CONTAINER AND SLIDER */}
           <div className="FilterContainer">
             <label htmlFor="threshold">Relevance Threshold: <strong>{threshold}%</strong></label>
             <input
