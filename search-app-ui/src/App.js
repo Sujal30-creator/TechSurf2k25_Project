@@ -17,8 +17,8 @@ function App() {
   const [smartSnippet, setSmartSnippet] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [selectedLocale, setSelectedLocale] = useState('');
-  const [selectedContentType, setSelectedContentType] = useState('');
+  const [selectedLocale] = useState('');
+  const [selectedContentType] = useState('');
   const [threshold, setThreshold] = useState(35);
   const [isRecording, setIsRecording] = useState(false);
   const mediaRecorder = useRef(null);
