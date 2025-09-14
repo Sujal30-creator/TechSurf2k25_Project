@@ -164,6 +164,23 @@ function App() {
     }
   };
 
+  const handleFeedback = async (resultId, feedbackType) => {
+    try {
+      await fetch(`${API_BASE_URL}/feedback`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          result_id: resultId,
+          feedback_type: feedbackType,
+        }),
+      });
+      // Optional: Give the user some visual confirmation, like changing the button color.
+      console.log(`Feedback (${feedbackType}) submitted for ${resultId}`);
+    } catch (error) {
+      console.error("Error submitting feedback:", error);
+    }
+  };
+
   // --- Render ---
 
   if (!appSdk) {
@@ -257,6 +274,10 @@ function App() {
                   {result.metadata?.description && (
                     <p className="ResultDescription">{result.metadata.description}</p>
                   )}
+                </div>
+                <div className="FeedbackButtons">
+                  <button onClick={() => handleFeedback(result.id, 'like')} title="Like result">👍</button>
+                  <button onClick={() => handleFeedback(result.id, 'dislike')} title="Dislike result">👎</button>
                 </div>
                 <button
                   className="SimilarButton"

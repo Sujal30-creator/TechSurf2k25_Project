@@ -81,6 +81,10 @@ class SearchQuery(BaseModel):
 class SimilarityQuery(BaseModel):
     id: str
 
+class FeedbackPayload(BaseModel):
+    result_id: str
+    feedback_type: str # 'like' or 'dislike'
+
 @app.post("/index")
 async def index_entry(payload: WebhookPayload):
     try:
@@ -301,3 +305,25 @@ async def voice_search(audio: UploadFile = File(...)):
         # CRITICAL: Clean up and delete the temporary file
         if os.path.exists(temp_file_path):
             os.remove(temp_file_path)
+
+@app.post("/feedback")
+async def handle_feedback(payload: FeedbackPayload):
+    # Only proceed if Redis is connected
+    if not r:
+        return {"status": "success", "message": "Feedback received, but analytics are disabled."}
+
+    try:
+        # Use a Redis Hash to store likes/dislikes for each result ID
+        # 'hincrby' means "hash increment by"
+        key = f"feedback:{payload.result_id}"
+
+        if payload.feedback_type == 'like':
+            r.hincrby(key, "likes", 1)
+        elif payload.feedback_type == 'dislike':
+            r.hincrby(key, "dislikes", 1)
+
+        return {"status": "success", "message": f"Feedback for {payload.result_id} recorded."}
+
+    except Exception as e:
+        print(f"An error occurred during feedback processing: {e}")
+        raise HTTPException(status_code=500, detail="Failed to process feedback.")

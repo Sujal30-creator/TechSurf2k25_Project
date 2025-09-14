@@ -32,7 +32,7 @@ function AnalyticsDashboard({ apiBaseUrl }) {
     return (
         <div className="AnalyticsContainer">
             <div className="AnalyticsColumn">
-                <h3 className="AnalyticsHeader">📊 Top Searches</h3>
+                <h3 className="AnalyticsHeader">Top Searches</h3>
                 <ul className="AnalyticsList">
                     {analyticsData?.top_searches.map((item, index) => (
                         <li key={index} className="AnalyticsListItem">
@@ -43,7 +43,7 @@ function AnalyticsDashboard({ apiBaseUrl }) {
                 </ul>
             </div>
             <div className="AnalyticsColumn">
-                <h3 className="AnalyticsHeader">❓ Content Gaps (Searches with No Results)</h3>
+                <h3 className="AnalyticsHeader">Content Gaps (Searches with No Results)</h3>
                 <ul className="AnalyticsList">
                     {analyticsData?.content_gaps.map((item, index) => (
                         <li key={index} className="AnalyticsListItem">
