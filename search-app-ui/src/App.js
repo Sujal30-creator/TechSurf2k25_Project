@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import ContentstackAppSDK from '@contentstack/app-sdk';
 import AnalyticsDashboard from './AnalyticsDashboard';
 import './App.css';
@@ -20,6 +20,9 @@ function App() {
   const [selectedLocale, setSelectedLocale] = useState('');
   const [selectedContentType, setSelectedContentType] = useState('');
   const [threshold, setThreshold] = useState(35);
+  const [isRecording, setIsRecording] = useState(false);
+  const mediaRecorder = useRef(null);
+  const audioChunks = useRef([]);
 
   // Initialize the Contentstack App SDK
   useEffect(() => {
@@ -101,6 +104,66 @@ function App() {
     }
   };
 
+  const handleToggleRecording = async () => {
+    if (isRecording) {
+      // Stop recording
+      mediaRecorder.current.stop();
+      setIsRecording(false);
+    } else {
+      // Start recording
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder.current = new MediaRecorder(stream);
+        audioChunks.current = [];
+
+        mediaRecorder.current.ondataavailable = (event) => {
+          audioChunks.current.push(event.data);
+        };
+
+        mediaRecorder.current.onstop = async () => {
+          const audioBlob = new Blob(audioChunks.current, { type: 'audio/webm' });
+          await sendAudioToServer(audioBlob);
+          // Stop all tracks on the stream to turn off the mic indicator
+          stream.getTracks().forEach(track => track.stop());
+        };
+
+        mediaRecorder.current.start();
+        setIsRecording(true);
+      } catch (err) {
+        console.error("Error accessing microphone:", err);
+        setError("Microphone access was denied. Please allow microphone access in your browser settings.");
+      }
+    }
+  };
+
+  const sendAudioToServer = async (audioBlob) => {
+    const formData = new FormData();
+    formData.append('audio', audioBlob, 'recording.webm');
+
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/voice-search`, {
+        method: 'POST',
+        body: formData, // NOTE: Do NOT set Content-Type header, browser does it for you
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to transcribe audio.');
+      }
+
+      const data = await response.json();
+      setSearchQuery(data.transcript); // Put the text in the search bar
+
+    } catch (error) {
+      console.error("Error transcribing audio:", error);
+      setError('Failed to transcribe audio. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // --- Render ---
 
   if (!appSdk) {
@@ -133,8 +196,6 @@ function App() {
             <p>Search through your content intelligently</p>
           </div>
 
-
-
           <div className="SearchContainer">
             <input
               type="text"
@@ -144,6 +205,10 @@ function App() {
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
             />
+            <button
+              className={`MicButton ${isRecording ? 'recording' : ''}`}
+              onClick={handleToggleRecording}
+            >🎤</button>
             <button className="SearchButton" onClick={handleSearch} disabled={isLoading}>
               {isLoading ? 'Searching...' : 'Search'}
             </button>
@@ -205,7 +270,7 @@ function App() {
 
             {!isLoading && results.length === 0 && !smartSnippet && !error && (
               <div className="Placeholder">
-                <p>🔍 Your search results will appear here</p>
+                <p>!! Your search results will appear here !!</p>
                 <p>Try searching for content in your knowledge base!</p>
               </div>
             )}

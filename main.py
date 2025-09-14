@@ -7,6 +7,8 @@ from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
 import redis
 import requests
+from fastapi import FastAPI, HTTPException, UploadFile, File
+import shutil
 
 # Initialize FastAPI app
 app = FastAPI()
@@ -269,3 +271,33 @@ async def get_analytics():
     formatted_gaps = [{"query": item.decode(), "count": int(score)} for item, score in content_gaps]
 
     return {"top_searches": formatted_top, "content_gaps": formatted_gaps}
+
+@app.post("/voice-search")
+async def voice_search(audio: UploadFile = File(...)):
+    # A temporary path to save the uploaded audio file
+    temp_file_path = f"/tmp/{audio.filename}"
+
+    try:
+        # Save the uploaded file to the temporary path
+        with open(temp_file_path, "wb") as buffer:
+            shutil.copyfileobj(audio.file, buffer)
+
+        # Open the saved file and send it to OpenAI's Whisper API
+        with open(temp_file_path, "rb") as audio_file:
+            transcription_response = client.audio.transcriptions.create(
+                model="whisper-1", 
+                file=audio_file
+            )
+
+        transcript_text = transcription_response.text
+
+        return {"status": "success", "transcript": transcript_text}
+
+    except Exception as e:
+        print(f"An error occurred during voice search: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+    finally:
+        # CRITICAL: Clean up and delete the temporary file
+        if os.path.exists(temp_file_path):
+            os.remove(temp_file_path)
