@@ -4,7 +4,7 @@ import AnalyticsDashboard from './AnalyticsDashboard';
 import './App.css';
 
 // Replace this with your actual Vercel deployment URL
-const API_BASE_URL = 'https://vercel.com/sujals-projects-9af316d2/techsurf-2k25';
+const API_BASE_URL = 'https://techsurf-2k25-git-feature-development-sujals-projects-9af316d2.vercel.app';
 
 function App() {
   // SDK State
