@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import ContentstackAppSDK from '@contentstack/app-sdk';
 import AnalyticsDashboard from './AnalyticsDashboard';
 import './App.css';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faThumbsUp, faThumbsDown } from '@fortawesome/free-solid-svg-icons';
 
 // Replace this with your actual Vercel deployment URL
 const API_BASE_URL = 'https://techsurf-2k25-git-feature-development-sujals-projects-9af316d2.vercel.app';
@@ -23,6 +25,7 @@ function App() {
   const [isRecording, setIsRecording] = useState(false);
   const mediaRecorder = useRef(null);
   const audioChunks = useRef([]);
+  const [feedbackState, setFeedbackState] = useState({});
 
   // Initialize the Contentstack App SDK
   useEffect(() => {
@@ -164,20 +167,36 @@ function App() {
     }
   };
 
+  // In App.js
   const handleFeedback = async (resultId, feedbackType) => {
+    // Check the current feedback for this result
+    const currentFeedback = feedbackState[resultId];
+    // If the user clicks the same button again, we'll deselect it (set to null)
+    const newFeedback = currentFeedback === feedbackType ? null : feedbackType;
+
+    // Update the UI immediately for a responsive feel
+    setFeedbackState(prevState => ({
+      ...prevState,
+      [resultId]: newFeedback
+    }));
+
     try {
+      // Send the feedback to the server
       await fetch(`${API_BASE_URL}/feedback`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           result_id: resultId,
-          feedback_type: feedbackType,
+          feedback_type: newFeedback,
         }),
       });
-      // Optional: Give the user some visual confirmation, like changing the button color.
-      console.log(`Feedback (${feedbackType}) submitted for ${resultId}`);
     } catch (error) {
       console.error("Error submitting feedback:", error);
+      // If the API call fails, revert the button to its original state
+      setFeedbackState(prevState => ({
+        ...prevState,
+        [resultId]: currentFeedback
+      }));
     }
   };
 
@@ -275,17 +294,29 @@ function App() {
                     <p className="ResultDescription">{result.metadata.description}</p>
                   )}
                 </div>
-                <div className="FeedbackButtons">
-                  <button onClick={() => handleFeedback(result.id, 'like')} title="Like result">👍</button>
-                  <button onClick={() => handleFeedback(result.id, 'dislike')} title="Dislike result">👎</button>
+                <div className="ActionButtonsContainer">
+                  <button
+                    className={`FeedbackButton ${feedbackState[result.id] === 'like' ? 'liked' : ''}`}
+                    onClick={() => handleFeedback(result.id, 'like')}
+                    title="Like result"
+                  >
+                    <FontAwesomeIcon icon={faThumbsUp} />
+                  </button>
+                  <button
+                    className={`FeedbackButton ${feedbackState[result.id] === 'dislike' ? 'disliked' : ''}`}
+                    onClick={() => handleFeedback(result.id, 'dislike')}
+                    title="Dislike result"
+                  >
+                    <FontAwesomeIcon icon={faThumbsDown} />
+                  </button>
+                  <button
+                    className="SimilarButton"
+                    onClick={() => handleFindSimilar(result.id, result.metadata.title)}
+                    title="Find similar content"
+                  >
+                    🪄
+                  </button>
                 </div>
-                <button
-                  className="SimilarButton"
-                  onClick={() => handleFindSimilar(result.id, result.metadata.title)}
-                  title="Find similar content"
-                >
-                  🪄
-                </button>
               </div>
             ))}
 

@@ -7,3 +7,4 @@ venv/
 # Python cache
 __pycache__/
 .vercel
+node_modules/

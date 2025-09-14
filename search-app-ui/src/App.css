@@ -245,8 +245,6 @@
   border: 1px solid #e00;
 }
 
-/* Add these to App.css */
-
 .NavContainer {
   display: flex;
   justify-content: center;
@@ -336,6 +334,47 @@
   background-color: #ff4136;
   color: white;
   animation: pulse 1.5s infinite;
+}
+
+.ActionButtonsContainer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 20px;
+}
+
+.FeedbackButton {
+  background-color: transparent;
+  border: 1px solid #ccc;
+  border-radius: 50%;
+  /* Makes the button circular */
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease-in-out;
+}
+
+.FeedbackButton:hover {
+  transform: scale(1.1);
+  background-color: #f0f0f0;
+}
+
+.FeedbackButton.liked {
+  background-color: #e0245e;
+  /* A nice red for likes */
+  color: white;
+  border-color: #e0245e;
+}
+
+.FeedbackButton.disliked {
+  background-color: #6c757d;
+  /* A neutral gray for dislike */
+  color: white;
+  border-color: #6c757d;
 }
 
 @keyframes pulse {
