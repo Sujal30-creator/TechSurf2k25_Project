@@ -31,7 +31,8 @@ CS_MANAGEMENT_TOKEN = os.getenv("CONTENTSTACK_MANAGEMENT_TOKEN")
 
 
 #--- Vercel KV (Redis) Connection ---
-KV_URL = os.getenv("KV_URL")
+# KV_URL = os.getenv("KV_URL")
+KV_URL = "redis://localhost:6379"
 if KV_URL:
     r = redis.from_url(KV_URL)
     print("Connected to Vercel KV (Redis)!")
