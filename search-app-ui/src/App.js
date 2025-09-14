@@ -3,7 +3,7 @@ import ContentstackAppSDK from '@contentstack/app-sdk';
 import AnalyticsDashboard from './AnalyticsDashboard';
 import './App.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faThumbsUp, faThumbsDown } from '@fortawesome/free-solid-svg-icons';
+import { faThumbsUp, faThumbsDown, faMicrophone } from '@fortawesome/free-solid-svg-icons';
 
 // Replace this with your actual Vercel deployment URL
 const API_BASE_URL = 'https://techsurf-2k25-git-feature-development-sujals-projects-9af316d2.vercel.app';
@@ -26,6 +26,7 @@ function App() {
   const mediaRecorder = useRef(null);
   const audioChunks = useRef([]);
   const [feedbackState, setFeedbackState] = useState({});
+  const [loadingMessage, setLoadingMessage] = useState('');
 
   // Initialize the Contentstack App SDK
   useEffect(() => {
@@ -37,6 +38,7 @@ function App() {
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
 
+    setLoadingMessage('');
     setIsLoading(true);
     setResults([]);
     setSmartSnippet('');
@@ -80,7 +82,8 @@ function App() {
     setResults([]);
     setSmartSnippet('');
     setError('');
-    setSearchQuery(`Finding content similar to "${title}"...`);
+    setLoadingMessage(`Finding content similar to "${title}"...`);
+
 
     try {
       const response = await fetch(`${API_BASE_URL}/find_similar`, {
@@ -104,6 +107,7 @@ function App() {
       setError('Failed to fetch similar content. Please try again.');
     } finally {
       setIsLoading(false);
+      setLoadingMessage(''); // Clear the message when done
     }
   };
 
@@ -244,7 +248,10 @@ function App() {
             <button
               className={`MicButton ${isRecording ? 'recording' : ''}`}
               onClick={handleToggleRecording}
-            >🎤</button>
+              title={isRecording ? 'Stop recording' : 'Start recording'}
+            >
+              <FontAwesomeIcon icon={faMicrophone} />
+            </button>
             <button className="SearchButton" onClick={handleSearch} disabled={isLoading}>
               {isLoading ? 'Searching...' : 'Search'}
             </button>
@@ -268,6 +275,11 @@ function App() {
               <div className="SpinnerContainer">
                 <div className="Spinner"></div>
               </div>
+            )}
+
+            {/*Display the loading message */}
+            {isLoading && loadingMessage && (
+              <div className="LoadingMessage">{loadingMessage}</div>
             )}
 
             {error && (
