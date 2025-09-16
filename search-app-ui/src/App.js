@@ -235,7 +235,7 @@ function App() {
       {view === 'search' ? (
         <>
           <div className="Header">
-            <h2>🔍 Semantic Search</h2>
+            <h2>🔍 Similarity Search</h2>
             <p>Search through your content intelligently</p>
           </div>
 
