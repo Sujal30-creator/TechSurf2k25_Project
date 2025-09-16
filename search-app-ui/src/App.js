@@ -30,7 +30,10 @@ function App() {
 
   // Initialize the Contentstack App SDK
   useEffect(() => {
-    ContentstackAppSDK.init().then(setAppSdk);
+    // Only initialize if running inside a parent window (the iframe)
+    if (window.parent) {
+      ContentstackAppSDK.init().then(setAppSdk);
+    }
   }, []);
 
   // --- API Call Functions ---
