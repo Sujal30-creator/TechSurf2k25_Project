@@ -85,6 +85,10 @@ class FeedbackPayload(BaseModel):
     result_id: str
     feedback_type: str # like / dislike
 
+class AnalyticsSummary(BaseModel):
+    total_searches: int
+    content_gaps: int
+
 @app.post("/index")
 async def index_entry(payload: WebhookPayload):
     try:
@@ -203,6 +207,18 @@ async def search_entries(query: SearchQuery):
         # Format the relevant results for the frontend
         results = []
         for match in relevant_matches:
+            # --- Add this logic ---
+            entry_uid = match['id'].split('-')[-1]
+            content_type_uid = match['metadata']['content_type']
+
+            # Construct the URL to the Contentstack entry editor
+            entry_url = f"https://app.contentstack.com/#!/stack/{CS_API_KEY}/content-type/{content_type_uid}/en-us/entry/{entry_uid}/edit"
+
+            # Add the URL to the metadata
+            match['metadata']['url'] = entry_url
+            # --- End of new logic ---
+
+
             results.append({
                 "id": match['id'],
                 "score": match['score'],
@@ -270,6 +286,60 @@ async def get_analytics():
     formatted_gaps = [{"query": item.decode(), "count": int(score)} for item, score in content_gaps]
 
     return {"top_searches": formatted_top, "content_gaps": formatted_gaps}
+
+@app.get("/analytics/summary", response_model=AnalyticsSummary)
+async def get_analytics_summary():
+    # If Redis is not connected, return zero values gracefully.
+    if not r:
+        return {"total_searches": 0, "content_gaps": 0}
+
+    try:
+        # zrange with withscores=True returns [item, score, item, score, ...]
+        # We only need the scores (counts), which are at odd indices.
+        all_searches_with_scores = r.zrange("top_searches", 0, -1, withscores=True)
+        total_searches = sum(int(score) for item, score in all_searches_with_scores)
+
+        all_gaps_with_scores = r.zrange("content_gaps", 0, -1, withscores=True)
+        total_gaps = sum(int(score) for item, score in all_gaps_with_scores)
+
+        return {"total_searches": total_searches, "content_gaps": total_gaps}
+
+    except Exception as e:
+        print(f"An error occurred during analytics summary: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch analytics summary.")
+    
+@app.get("/analytics/feedback")
+async def get_feedback_analytics():
+    if not r:
+        return {"most_liked": [], "most_disliked": []}
+
+    try:
+        feedback_keys = [key.decode() for key in r.scan_iter("feedback:*")]
+
+        all_feedback = []
+        for key in feedback_keys:
+            feedback_data = r.hgetall(key)
+            # Decode from bytes to string/int
+            likes = int(feedback_data.get(b'likes', 0))
+            dislikes = int(feedback_data.get(b'dislikes', 0))
+            # Extract the entry ID from the key "feedback:locale-ct-uid"
+            entry_id = key.split(":", 1)[1]
+
+            # We need the title for the chart, so let's fetch it from Pinecone
+            fetch_response = index.fetch(ids=[entry_id])
+            title = fetch_response.vectors.get(entry_id, {}).metadata.get('title', entry_id)
+
+            all_feedback.append({"title": title, "likes": likes, "dislikes": dislikes})
+
+        # Sort to find the top 5 most liked and most disliked
+        most_liked = sorted(all_feedback, key=lambda x: x['likes'], reverse=True)[:5]
+        most_disliked = sorted(all_feedback, key=lambda x: x['dislikes'], reverse=True)[:5]
+
+        return {"most_liked": most_liked, "most_disliked": most_disliked}
+
+    except Exception as e:
+        print(f"An error occurred during feedback analytics: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch feedback analytics.")
 
 @app.post("/voice-search")
 async def voice_search(audio: UploadFile = File(...)):

@@ -300,40 +300,48 @@ function App() {
             )}
 
             {results.map((result, index) => (
-              <div key={result.id || index} className="ResultCard">
-                <div className="ResultContent">
-                  <p className="ResultTitle">{result.metadata?.title || 'Untitled Content'}</p>
-                  <p className="ResultInfo">
-                    Score: {(result.score * 100).toFixed(2)}% | Type: {result.metadata?.content_type || 'Unknown'}
-                  </p>
-                  {result.metadata?.description && (
-                    <p className="ResultDescription">{result.metadata.description}</p>
-                  )}
+              <a
+                href={result.metadata.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="ResultCardLink"
+                key={result.id || index}
+              >
+                <div className="ResultCard">
+                  <div className="ResultContent">
+                    <p className="ResultTitle">{result.metadata?.title || 'Untitled Content'}</p>
+                    <p className="ResultInfo">
+                      Score: {(result.score * 100).toFixed(2)}% | Type: {result.metadata?.content_type || 'Unknown'}
+                    </p>
+                    {result.metadata?.description && (
+                      <p className="ResultDescription">{result.metadata.description}</p>
+                    )}
+                  </div>
+                  <div className="ActionButtonsContainer">
+                    <button
+                      className={`FeedbackButton ${feedbackState[result.id] === 'like' ? 'liked' : ''}`}
+                      onClick={(e) => { e.preventDefault(); handleFeedback(result.id, 'like'); }}
+                      title="Like result"
+                    >
+                      <FontAwesomeIcon icon={faThumbsUp} />
+                    </button>
+                    <button
+                      className={`FeedbackButton ${feedbackState[result.id] === 'dislike' ? 'disliked' : ''}`}
+                      onClick={(e) => { e.preventDefault(); handleFeedback(result.id, 'dislike'); }}
+                      title="Dislike result"
+                    >
+                      <FontAwesomeIcon icon={faThumbsDown} />
+                    </button>
+                    <button
+                      className="SimilarButton"
+                      onClick={(e) => { e.preventDefault(); handleFindSimilar(result.id, result.metadata.title); }}
+                      title="Find similar content"
+                    >
+                      🪄
+                    </button>
+                  </div>
                 </div>
-                <div className="ActionButtonsContainer">
-                  <button
-                    className={`FeedbackButton ${feedbackState[result.id] === 'like' ? 'liked' : ''}`}
-                    onClick={() => handleFeedback(result.id, 'like')}
-                    title="Like result"
-                  >
-                    <FontAwesomeIcon icon={faThumbsUp} />
-                  </button>
-                  <button
-                    className={`FeedbackButton ${feedbackState[result.id] === 'dislike' ? 'disliked' : ''}`}
-                    onClick={() => handleFeedback(result.id, 'dislike')}
-                    title="Dislike result"
-                  >
-                    <FontAwesomeIcon icon={faThumbsDown} />
-                  </button>
-                  <button
-                    className="SimilarButton"
-                    onClick={() => handleFindSimilar(result.id, result.metadata.title)}
-                    title="Find similar content"
-                  >
-                    🪄
-                  </button>
-                </div>
-              </div>
+              </a>
             ))}
 
             {!isLoading && results.length === 0 && !smartSnippet && !error && (

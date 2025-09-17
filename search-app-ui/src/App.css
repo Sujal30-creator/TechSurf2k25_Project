@@ -388,6 +388,31 @@
   border-radius: 8px;
 }
 
+.ResultCardLink {
+  text-decoration: none;
+  /* Removes the underline */
+  color: inherit;
+  /* Ensures text color is not changed to blue */
+}
+
+.AnalyticsPageContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.AnalyticsRow {
+  display: flex;
+  gap: 20px;
+  justify-content: space-around;
+}
+
+.AnalyticsColumn.wide {
+  flex: 1;
+  min-width: 0;
+  /* Prevents chart overflow */
+}
+
 @keyframes pulse {
   0% {
     box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7);
