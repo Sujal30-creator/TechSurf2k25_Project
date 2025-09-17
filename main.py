@@ -10,29 +10,29 @@ import requests
 from fastapi import FastAPI, HTTPException, UploadFile, File
 import shutil
 
-# Initialize FastAPI app
+# initialize FastAPI app
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allows all origins
+    allow_origins=["*"], 
     allow_credentials=True,
-    allow_methods=["*"],  # Allows all methods
-    allow_headers=["*"],  # Allows all headers
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-# Load environment variables from .env file
+#load env variables from .env file
 load_dotenv()
 
-# Load API keys from environment variables
+# !!--- Load API keys from env variables ---!!
 OPENAI_API_KEY = os.getenv("OPEN_AI_KEY")
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
-# PINECONE_ENVIRONMENT = os.getenv("PINECONE_ENVIRONMENT")  # e.g. "us-east-1-aws"
-PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME")    # e.g. "contentstack-search"
+# PINECONE_ENVIRONMENT = os.getenv("PINECONE_ENVIRONMENT") 
+PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME")    
 CS_API_KEY = os.getenv("CONTENTSTACK_API_KEY")
 CS_MANAGEMENT_TOKEN = os.getenv("CONTENTSTACK_MANAGEMENT_TOKEN")
 
 
-#--- Vercel KV (Redis) Connection ---
+#--- Vercel KV (Redis) connectn. ---
 KV_URL = os.getenv("KV_URL")
 if KV_URL:
     r = redis.from_url(KV_URL)
@@ -42,18 +42,18 @@ else:
     print("Vercel KV URL not found. Analytics will be disabled.")
 
 
-# Initialize OpenAI client
+# initialize openai client!!
 client = OpenAI(api_key=OPENAI_API_KEY)
 
-# Initialize Pinecone client instance (new style)
+#initialize pinecone client inst. 
 pc = Pinecone(api_key=PINECONE_API_KEY)
 
-# Connect to the Pinecone index
+# connection to the pinecone index!!
 index = pc.Index(PINECONE_INDEX_NAME)
 
 print("Services Initialized Successfully!")
 
-# Helper function to safely extract text from Rich Text Editor JSON
+# Helper fnx.
 def extract_text_from_rte(rte_json):
     texts = []
     def recurse(nodes):
@@ -74,8 +74,8 @@ class WebhookPayload(BaseModel):
 
 class SearchQuery(BaseModel):
     query: str
-    locale: str | None = None # Optional filter
-    content_type: str | None = None # Optional filter
+    locale: str | None = None 
+    content_type: str | None = None 
     threshold: float | None = 35.0
 
 class SimilarityQuery(BaseModel):
@@ -83,7 +83,7 @@ class SimilarityQuery(BaseModel):
 
 class FeedbackPayload(BaseModel):
     result_id: str
-    feedback_type: str # 'like' or 'dislike'
+    feedback_type: str # like / dislike
 
 @app.post("/index")
 async def index_entry(payload: WebhookPayload):
@@ -92,7 +92,7 @@ async def index_entry(payload: WebhookPayload):
         entry_uid = entry_data.get("uid")
         locale = entry_data.get("locale")
         
-        # --- FINAL FIX: Most robust way to get content_type_uid ---
+        # --- Most robust way to get content_type_uid ---
         content_type_uid = entry_data.get("content_type", {}).get("uid")
         if not content_type_uid:
             content_type = payload.data.get("content_type", {})
@@ -166,25 +166,21 @@ async def search_entries(query: SearchQuery):
             filter=metadata_filter if metadata_filter else None
         )
 
-        # NEW: Filter the results based on our threshold
+        #Filter the results based on our threshold
         raw_matches = search_results.get('matches', [])
         relevant_matches = [match for match in raw_matches if match['score'] >= relevance_threshold]
 
-        # --- (NEW) Analytics Logic ---
+        # --- Analytics Logic ---
         is_content_gap = True
         if r and query.query:
-            # Always log the search term
             r.zincrby("top_searches", 1, query.query.lower().strip())
             
-            # Check if the BEST result meets our quality threshold
             if relevant_matches and relevant_matches[0]['score'] >= CONTENT_GAP_THRESHOLD:
                 is_content_gap = False
             
             # If no result met the quality threshold, log it as a content gap
             if is_content_gap:
                 r.zincrby("content_gaps", 1, query.query.lower().strip())
-
-         # --- (Smart Snippet and Results Formatting) ---
 
         smart_snippet = ""
         # Only generate a snippet if there are RELEVANT results
@@ -213,7 +209,7 @@ async def search_entries(query: SearchQuery):
                 "metadata": match['metadata']
             })
 
-        # NEW: Log to content gaps only if there are NO RELEVANT results
+        #Log to content gaps only if there are NO RELEVANT results
         if not relevant_matches and r and query.query:
             r.zincrby("top_searches", 1, query.query.lower().strip())
             r.zincrby("content_gaps", 1, query.query.lower().strip())
@@ -232,7 +228,6 @@ async def find_similar_entries(query: SimilarityQuery):
     try:
         # 1. Fetch the vector for the given ID from Pinecone
         fetch_response = index.fetch(ids=[query.id])
-        # New, corrected line
         source_vector = fetch_response.vectors[query.id].values
 
         # 2. Query Pinecone using the fetched vector
@@ -314,7 +309,7 @@ async def handle_feedback(payload: FeedbackPayload):
 
     try:
         # Use a Redis Hash to store likes/dislikes for each result ID
-        # 'hincrby' means "hash increment by"
+        # 'hincrby' is a new one in my journey it means "hash increment by"
         key = f"feedback:{payload.result_id}"
 
         if payload.feedback_type == 'like':
