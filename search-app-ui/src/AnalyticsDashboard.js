@@ -119,51 +119,48 @@ function AnalyticsDashboard({ apiBaseUrl }) {
     }
 
     return (
-        <div className="AnalyticsContainer">
-            <div className="AnalyticsColumn">
-                <h3 className="AnalyticsHeader">Search Effectiveness</h3>
-                <div style={{ height: '300px', position: 'relative' }}>
-                    <Pie data={pieChartData} options={{ maintainAspectRatio: false, responsive: true }} />
+        <div className="AnalyticsPageContainer">
+            {/* --- Top Row --- */}
+            <div className="AnalyticsRow">
+                <div className="AnalyticsColumn">
+                    <h3 className="AnalyticsHeader">Search Effectiveness</h3>
+                    <div style={{ height: '300px', position: 'relative' }}>
+                        <Pie data={pieChartData} options={{ maintainAspectRatio: false, responsive: true }} />
+                    </div>
+                </div>
+                <div className="AnalyticsColumn">
+                    <h3 className="AnalyticsHeader">Top Searches</h3>
+                    <ul className="AnalyticsList">
+                        {topSearches.map((item, index) => (
+                            <li key={index} className="AnalyticsListItem">
+                                <span>{item.query}</span>
+                                <span className="AnalyticsCount">{item.count}</span>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+                <div className="AnalyticsColumn">
+                    <h3 className="AnalyticsHeader">Content Gaps</h3>
+                    <ul className="AnalyticsList">
+                        {contentGaps.map((item, index) => (
+                            <li key={index} className="AnalyticsListItem">
+                                <span>{item.query}</span>
+                                <span className="AnalyticsCount">{item.count}</span>
+                            </li>
+                        ))}
+                    </ul>
                 </div>
             </div>
 
-            <div className="AnalyticsColumn">
-                <h3 className="AnalyticsHeader">Top Searches</h3>
-                <ul className="AnalyticsList">
-                    {topSearches.map((item, index) => (
-                        <li key={index} className="AnalyticsListItem">
-                            <span>{item.query}</span>
-                            <span className="AnalyticsCount">{item.count}</span>
-                        </li>
-                    ))}
-                </ul>
-            </div>
-
-            <div className="AnalyticsColumn">
-                <h3 className="AnalyticsHeader">Content Gaps</h3>
-                <ul className="AnalyticsList">
-                    {contentGaps.map((item, index) => (
-                        <li key={index} className="AnalyticsListItem">
-                            <span>{item.query}</span>
-                            <span className="AnalyticsCount">{item.count}</span>
-                        </li>
-                    ))}
-                </ul>
-            </div>
-
-            <div className="AnalyticsPageContainer">
-                <div className="AnalyticsRow">
-
+            {/* --- Bottom Row --- */}
+            <div className="AnalyticsRow">
+                <div className="AnalyticsColumn wide">
+                    <h3 className="AnalyticsHeader">Most Liked Content</h3>
+                    <Bar options={barChartOptions} data={likedChartData} />
                 </div>
-                <div className="AnalyticsRow">
-                    <div className="AnalyticsColumn wide">
-                        <h3 className="AnalyticsHeader">Most Liked Content</h3>
-                        <Bar options={barChartOptions} data={likedChartData} />
-                    </div>
-                    <div className="AnalyticsColumn wide">
-                        <h3 className="AnalyticsHeader">Most Disliked Content</h3>
-                        <Bar options={barChartOptions} data={dislikedChartData} />
-                    </div>
+                <div className="AnalyticsColumn wide">
+                    <h3 className="AnalyticsHeader">Most Disliked Content</h3>
+                    <Bar options={barChartOptions} data={dislikedChartData} />
                 </div>
             </div>
         </div>
