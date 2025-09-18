@@ -212,7 +212,7 @@ async def search_entries(query: SearchQuery):
             content_type_uid = match['metadata']['content_type']
 
             # Construct the URL to the Contentstack entry editor
-            entry_url = f"https://app.contentstack.com/#!/stack/{CS_API_KEY}/content-type/{content_type_uid}/en-us/entry/{entry_uid}/edit"
+            entry_url = f"https://eu-app.contentstack.com/#!/stack/{CS_API_KEY}/content-type/{content_type_uid}/en-us/entry/{entry_uid}/edit?branch=main"
 
             # Add the URL to the metadata
             match['metadata']['url'] = entry_url
