@@ -122,7 +122,6 @@ function AnalyticsDashboard({ apiBaseUrl }) {
         <div className="AnalyticsContainer">
             <div className="AnalyticsColumn">
                 <h3 className="AnalyticsHeader">Search Effectiveness</h3>
-                {/* limit the height to keep it from getting too large. */}
                 <div style={{ height: '300px', position: 'relative' }}>
                     <Pie data={pieChartData} options={{ maintainAspectRatio: false, responsive: true }} />
                 </div>
@@ -152,11 +151,11 @@ function AnalyticsDashboard({ apiBaseUrl }) {
                 </ul>
             </div>
 
-            <div className="AnalyticsPageContainer"> // Use a new container class
-                <div className="AnalyticsRow"> // Wrap first row in a div
-                    {/* ... Your Pie Chart and List columns ... */}
+            <div className="AnalyticsPageContainer">
+                <div className="AnalyticsRow">
+
                 </div>
-                <div className="AnalyticsRow"> // Second row for the new charts
+                <div className="AnalyticsRow">
                     <div className="AnalyticsColumn wide">
                         <h3 className="AnalyticsHeader">Most Liked Content</h3>
                         <Bar options={barChartOptions} data={likedChartData} />
