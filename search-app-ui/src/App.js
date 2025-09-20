@@ -29,9 +29,23 @@ function App() {
   const [loadingMessage, setLoadingMessage] = useState('');
 
   // Initialize the Contentstack App SDK
+  // useEffect(() => {
+  //   // Only initialize if running inside a parent window (the iframe)
+  //   if (window.parent) {
+  //     ContentstackAppSDK.init().then(setAppSdk);
+  //   }
+  // }, []);
+
   useEffect(() => {
-    // Only initialize if running inside a parent window (the iframe)
-    if (window.parent) {
+    // Check if the app is running standalone (not in an iframe)
+    const isStandalone = window.self === window.top;
+
+    if (isStandalone) {
+      // If running by itself, we don't need the SDK.
+      // Set a dummy object to bypass the loading screen and render the app.
+      setAppSdk({});
+    } else {
+      // If running inside Contentstack, initialize the SDK as normal.
       ContentstackAppSDK.init().then(setAppSdk);
     }
   }, []);
