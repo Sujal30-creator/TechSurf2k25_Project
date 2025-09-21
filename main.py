@@ -96,7 +96,6 @@ async def index_entry(payload: WebhookPayload):
         entry_uid = entry_data.get("uid")
         locale = entry_data.get("locale")
         
-        # --- Most robust way to get content_type_uid ---
         content_type_uid = entry_data.get("content_type", {}).get("uid")
         if not content_type_uid:
             content_type = payload.data.get("content_type", {})
@@ -174,7 +173,6 @@ async def search_entries(query: SearchQuery):
         raw_matches = search_results.get('matches', [])
         relevant_matches = [match for match in raw_matches if match['score'] >= relevance_threshold]
 
-        # --- Analytics Logic ---
         is_content_gap = True
         if r and query.query:
             r.zincrby("top_searches", 1, query.query.lower().strip())
@@ -207,16 +205,13 @@ async def search_entries(query: SearchQuery):
         # Format the relevant results for the frontend
         results = []
         for match in relevant_matches:
-            # --- Add this logic ---
             entry_uid = match['id'].split('-')[-1]
             content_type_uid = match['metadata']['content_type']
 
             # Construct the URL to the Contentstack entry editor
             entry_url = f"https://eu-app.contentstack.com/#!/stack/{CS_API_KEY}/content-type/{content_type_uid}/en-us/entry/{entry_uid}/edit?branch=main"
 
-            # Add the URL to the metadata
             match['metadata']['url'] = entry_url
-            # --- End of new logic ---
 
 
             results.append({
@@ -229,7 +224,7 @@ async def search_entries(query: SearchQuery):
         if not relevant_matches and r and query.query:
             r.zincrby("top_searches", 1, query.query.lower().strip())
             r.zincrby("content_gaps", 1, query.query.lower().strip())
-        elif r and query.query: # Log to top searches if there were results
+        elif r and query.query: 
              r.zincrby("top_searches", 1, query.query.lower().strip())
 
 
@@ -256,7 +251,7 @@ async def find_similar_entries(query: SimilarityQuery):
         # 3. Format results, skipping the original document itself
         results = []
         for match in search_results['matches']:
-            if match['id'] != query.id: # Filter out the source document
+            if match['id'] != query.id:
                 results.append({
                     "id": match['id'],
                     "score": match['score'],

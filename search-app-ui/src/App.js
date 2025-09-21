@@ -6,7 +6,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faThumbsUp, faThumbsDown, faMicrophone } from '@fortawesome/free-solid-svg-icons';
 
 // VERCEL DEPLOYMENT URL
-const API_BASE_URL = 'https://techsurf-2k25-git-feature-development-sujals-projects-9af316d2.vercel.app';
+const API_BASE_URL = 'https://techsurf-2k25.vercel.app/';
 
 function App() {
   // SDK State
