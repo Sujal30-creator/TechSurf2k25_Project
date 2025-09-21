@@ -245,8 +245,6 @@
   border: 1px solid #e00;
 }
 
-/* Add these to App.css */
-
 .NavContainer {
   display: flex;
   justify-content: center;
@@ -318,6 +316,162 @@
   padding: 2px 6px;
   border-radius: 4px;
   font-size: 12px;
+}
+
+.MicButton {
+  padding: 0 12px;
+  border: 1px solid #ccc;
+  background-color: #f0f0f0;
+  cursor: pointer;
+  font-size: 1.2rem;
+  border-radius: 8px 0 0 8px;
+  /* Style it to sit next to the input */
+  margin-right: -1px;
+  /* Overlap border with search input */
+}
+
+.MicButton.recording {
+  background-color: #28a745;
+  /* Green */
+  color: white;
+  animation: pulse 1.5s infinite;
+}
+
+.ActionButtonsContainer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 20px;
+}
+
+.FeedbackButton {
+  background-color: transparent;
+  border: 1px solid #ccc;
+  border-radius: 50%;
+  /* Makes the button circular */
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease-in-out;
+}
+
+.FeedbackButton:hover {
+  transform: scale(1.1);
+  background-color: #f0f0f0;
+}
+
+.FeedbackButton.liked {
+  background-color: #e0245e;
+  /* A nice red for likes */
+  color: white;
+  border-color: #e0245e;
+}
+
+.FeedbackButton.disliked {
+  background-color: #6c757d;
+  /* A neutral gray for dislike */
+  color: white;
+  border-color: #6c757d;
+}
+
+.LoadingMessage {
+  text-align: center;
+  color: #555;
+  padding: 20px;
+  font-size: 16px;
+  font-style: italic;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+}
+
+.ResultCardLink {
+  text-decoration: none;
+  /* Removes the underline */
+  color: inherit;
+  /* Ensures text color is not changed to blue */
+}
+
+.AnalyticsPageContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  /* Increased gap between rows */
+}
+
+.AnalyticsRow {
+  display: grid;
+  /* Creates a flexible grid with columns of equal width */
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 24px;
+}
+
+.AnalyticsColumn {
+  background-color: #fff;
+  border: 1px solid #e1e8ed;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+/* This makes the bar chart columns span the full width in their row */
+.AnalyticsColumn.wide {
+  grid-column: 1 / -1;
+  /* Span from the first to the last grid line */
+}
+
+.AnalyticsHeader {
+  margin-top: 0;
+  font-size: 16px;
+  border-bottom: 2px solid #eee;
+  padding-bottom: 10px;
+  margin-bottom: 15px;
+}
+
+.AnalyticsList {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+}
+
+.AnalyticsListItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 4px;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 14px;
+}
+
+.AnalyticsListItem:last-child {
+  border-bottom: none;
+}
+
+.AnalyticsCount {
+  font-weight: bold;
+  background-color: #e9ecef;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  margin-left: 10px;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7);
+    /* Green shadow */
+  }
+
+  70% {
+    box-shadow: 0 0 0 10px rgba(40, 167, 69, 0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(40, 167, 69, 0);
+  }
 }
 
 @keyframes spin {
