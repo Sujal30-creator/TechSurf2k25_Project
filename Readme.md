@@ -95,11 +95,11 @@ cd Techsurf-2k25
 
 ### Btw here are some important links:
 
-Vercel Backend URL :- 
-Contentstack host URL :-
+Vercel Backend URL :- ```https://techsurf-2k25.vercel.app/```
+Contentstack launch URL :- ```search-app-ui-feature-development.eu-contentstackapps.com```
 
-Youtube Video Link :-
-Google Slides link :-
+Youtube Video Link :- 
+Google Slides link :- ```https://docs.google.com/presentation/d/16vPDMBdoR1Byo8EaxQTBd-xJuLwka64yHpqLRJsFgM0/edit?usp=sharing```
 
 
 
