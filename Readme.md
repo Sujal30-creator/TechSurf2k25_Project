@@ -98,7 +98,7 @@ cd Techsurf-2k25
 Vercel Backend URL :- ```https://techsurf-2k25.vercel.app/```
 Contentstack launch URL :- ```search-app-ui-feature-development.eu-contentstackapps.com```
 
-Youtube Video Link :- 
+Youtube Video Link :- ```https://youtu.be/eX8Vtq_HyHQ```
 Google Slides link :- ```https://docs.google.com/presentation/d/16vPDMBdoR1Byo8EaxQTBd-xJuLwka64yHpqLRJsFgM0/edit?usp=sharing```
 
 
